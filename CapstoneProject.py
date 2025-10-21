@@ -226,6 +226,8 @@ def change_colour_npc(hand, played_card):
     playable_colours = []
 
     for card in hand.hand_list:
+        if card.colour == "":
+            continue
         if card.colour not in playable_colours:
             playable_colours.append(card.colour)
 
