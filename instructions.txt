@@ -1,0 +1,13 @@
+HOW TO PLAY UNO:
+
+- The game is fully text based, and will give you prompts of which number will select each card
+- You play with 3 npcs, who make simple random choices depending on the state of the game
+
+RULES:
+- You can play any card of the same colour on each other
+- You can play any card of the same value on each other
+- A skip will skip the next players turn
+- A reverse will reverse the direction of play
+- You can play a draw 2 on another draw 2 to stack the cards drawn
+- You can play a wild draw 4 on another wild draw 4 to stack the cards drawn
+- You cannot play a draw 2 on a wild draw 4 or vice versa
