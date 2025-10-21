@@ -37,7 +37,6 @@ class Deck:
         for _ in range(2):
             for colour in colours:
                 for value in range(0, 10):
-                    print(colour, colours.index(colour))
                     sort_value = colours.index(colour) * 13 + value
                     card = Card(value=str(value),
                                 colour=colour,
@@ -70,8 +69,20 @@ class Deck:
     def shuffle_deck(self):
         random.shuffle(self.deck_list)
 
-    def delete_deck(self):
+    def clear_deck(self):
         self.deck_list.clear
+
+    def clear_throw_pile(self):
+        self.throw_pile.clear
+
+    def add_to_throw_pile(self):
+        self.throw_pile.append(self.top_card)
+
+    def check_and_recycle(self):
+        if len(self.deck_list) == 0:
+            self.deck_list = self.throw_pile
+            self.shuffle_deck()
+            self.clear_throw_pile()
 
 
 class Hand:
@@ -109,12 +120,22 @@ class Hand:
         self.hand_list = sorted_hand
 
     def draw_card(self, deck, num_of_cards):
+        how_many_drew = 0
         for _ in range(num_of_cards):
-            card = deck.deck_list[0]
-            deck.deck_list.remove(card)
-            self.hand_list.append(card)
+            deck.check_and_recycle()
+            if len(deck.deck_list) != 0:
+                card = deck.deck_list[0]
+                deck.deck_list.remove(card)
+                self.hand_list.append(card)
+                how_many_drew += 1
+            else:
+                print("No cards left in the deck!")
+                break
 
-        self.sort_hand()
+        if how_many_drew > 0:
+            self.sort_hand()
+
+        return how_many_drew
 
 
 def ask_user_for_number(message, min, max):
@@ -150,18 +171,6 @@ def deal_hands(deck):
     p2 = Hand("Player 2", p2_hand)
     p3 = Hand("Player 3", p3_hand)
     p4 = Hand("Player 4", p4_hand)
-
-    print("\nSorted Player 1 Hand")
-    p1.display_hand()
-
-    print("\nSorted Player 2 Hand")
-    p2.display_hand()
-
-    print("\nSorted Player 3 Hand")
-    p3.display_hand()
-
-    print("\nSorted Player 4 Hand")
-    p4.display_hand()
 
     return [p1, p2, p3, p4]
 
@@ -224,7 +233,7 @@ def change_colour_npc(hand, played_card):
         random_colour = colours[random.randint(0, 3)]
     else:
         random_colour = playable_colours[random.randint(
-            0, len(playable_colours))]
+            0, len(playable_colours) - 1)]
 
     played_card.set_colour(random_colour)
 
@@ -233,7 +242,10 @@ def change_colour_npc(hand, played_card):
 
 def display_player_turn(total_turns, player, top_card, draw_amount):
     print(f"\n\n\nTurn {total_turns}")
-    print(f"{player.name}'s turn\n")
+    if len(player.hand_list) == 1:
+        print(f"{player.name}'s turn - {len(player.hand_list)} card\n")
+    else:
+        print(f"{player.name}'s turn - {len(player.hand_list)} cards\n")
 
     if top_card.name == "Wild" or top_card.name == "Wild Draw":
         card_name = f"{top_card.name} ({top_card.colour})"
@@ -248,7 +260,10 @@ def display_player_turn(total_turns, player, top_card, draw_amount):
 
 def display_npc_turn(total_turns, player, top_card):
     print(f"\n\n\nTurn {total_turns}")
-    print(f"{player.name}'s turn\n")
+    if len(player.hand_list) == 1:
+        print(f"{player.name}'s turn - {len(player.hand_list)} card\n")
+    else:
+        print(f"{player.name}'s turn - {len(player.hand_list)} cards\n")
 
     if top_card.name == "Wild" or top_card.name == "Wild Draw":
         card_name = f"{top_card.name} ({top_card.colour})"
@@ -282,7 +297,7 @@ def get_playable_cards(player, top_card, draw_amount):
     return playable_cards
 
 
-def players_turn(deck, player, total_turns, draw_amount):
+def players_turn(deck, player, total_turns, draw_amount, is_reversed):
     draw_card = False
     top_card = deck.get_top_card()
     turns_to_skip = 1
@@ -312,7 +327,14 @@ def players_turn(deck, player, total_turns, draw_amount):
                 break
 
     if draw_card:
-        player.draw_card(deck, draw_amount)
+        how_many_drew = player.draw_card(deck, draw_amount)
+
+        if how_many_drew == 0:
+            print(f"{player.name} couldn't draw any cards!")
+        elif how_many_drew == 1:
+            print(f"{player.name} drew 1 card!")
+        else:
+            print(f"{player.name} drew {how_many_drew} cards!")
         draw_amount = 1
     else:
         player.remove_card(played_card)
@@ -331,12 +353,13 @@ def players_turn(deck, player, total_turns, draw_amount):
         elif played_card.value == "Skip":
             turns_to_skip = 2
 
+        deck.add_to_throw_pile()
         deck.set_top_card(played_card)
 
-    return turns_to_skip, draw_amount
+    return turns_to_skip, draw_amount, is_reversed
 
 
-def npc_turn(deck, player, total_turns, draw_amount):
+def npc_turn(deck, player, total_turns, draw_amount, is_reversed):
     top_card = deck.get_top_card()
     turns_to_skip = 1
 
@@ -345,12 +368,15 @@ def npc_turn(deck, player, total_turns, draw_amount):
     playable_cards = get_playable_cards(player, top_card, draw_amount)
 
     if len(playable_cards) == 0:
-        player.draw_card(deck, draw_amount)
+        how_many_drew = player.draw_card(deck, draw_amount)
 
-        if draw_amount == 1:
-            print(f"{player.name} drew {draw_amount} card!")
+        if how_many_drew == 0:
+            print(f"{player.name} couldn't draw any cards!")
+        elif how_many_drew == 1:
+            print(f"{player.name} drew 1 card!")
         else:
-            print(f"{player.name} drew {draw_amount} cards!")
+            print(f"{player.name} drew {how_many_drew} cards!")
+        draw_amount = 1
     else:
         choice = random.randint(0, len(playable_cards) - 1)
         played_card = playable_cards[choice]
@@ -370,9 +396,10 @@ def npc_turn(deck, player, total_turns, draw_amount):
         elif played_card.value == "Skip":
             turns_to_skip = 2
 
+        deck.add_to_throw_pile()
         deck.set_top_card(played_card)
 
-    return turns_to_skip, draw_amount
+    return turns_to_skip, draw_amount, is_reversed
 
 
 def main():
@@ -389,11 +416,11 @@ def main():
         turns_to_skip = 1
 
         if player.name == "Player 1":
-            turns_to_skip, draw_amount = players_turn(
-                deck, player, total_turns, draw_amount)
+            turns_to_skip, draw_amount, is_reversed = players_turn(
+                deck, player, total_turns, draw_amount, is_reversed)
         else:
-            turns_to_skip, draw_amount = npc_turn(
-                deck, player, total_turns, draw_amount)
+            turns_to_skip, draw_amount, is_reversed = npc_turn(
+                deck, player, total_turns, draw_amount, is_reversed)
 
         for _ in range(turns_to_skip):
             if not is_reversed:
@@ -412,10 +439,8 @@ def main():
         if len(player.hand_list) == 0:
             break
 
-    print("\n\n\n")
-    print(f"Congratulations {player.name}!")
-    print("You Win!")
-    print("\n")
+    print(f"\n\n\nCongratulations {player.name}!")
+    print("You Win!\n")
 
 
 if __name__ == "__main__":
